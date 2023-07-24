@@ -17,6 +17,16 @@ For the SPI CS lines:
  *   SPI_CS_2 - pin 14
  *   SPI_CS_3 - pin 15 (RTC)
 
+ Flash Pins:
+- 1 - CS
+- 2 - SDO
+- 3 -
+- 4 - GND
+- 5 - SDI
+- 6 - SCK
+- 7 - 
+- 8 - VCC
+
 ## Dependencies
  - https://github.com/gemarcano/AmbiqSuiteSDK
  - https://github.com/gemarcano/asimple
