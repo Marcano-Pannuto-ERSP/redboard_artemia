@@ -74,31 +74,76 @@ int main(void)
 	flash_init(&flash, &spi);
 	pdm_init(&pdm);
 
-	// Flash is CS pin 11 (SPI_CS_0)
+	// print the data before write
+	int size1 = 18 + 8;
+	uint8_t buffer1[size1];		// this is 4x bigger than necessary
+	flash_read_data(&flash, 0x04, buffer1, size1);
+	char* buf1 = buffer1;
+	am_util_stdio_printf("before write:\r\n");
+	for (int i = 0; i < size1; i++) {
+		am_util_stdio_printf("%02X ", (int) buf1[i]);
+		am_util_delay_ms(10);
+	}
+	am_util_stdio_printf("\r\n");
+
+	// print the flash ID to make sure the CS is connected correctly
 	spi_chip_select(&spi, SPI_CS_0);
+	am_util_stdio_printf("flash ID: %02X\r\n", flash_read_id(&flash));
+
+	// print the RTC ID to make sure the CS is connected correctly
+	spi_chip_select(&spi, SPI_CS_3);
+	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(&rtc, 0x28));
 
 	// Write banner to Flash
+	spi_chip_select(&spi, SPI_CS_0);
 	const char toWrite[] = "We're beginning\r\n";
 	am_util_stdio_printf("Size: %u\r\n", sizeof(toWrite));
 	flash_page_program(&flash, 0, (uint8_t*)&toWrite, sizeof(toWrite));
+	flash_wait_busy(&flash);
 	
 	// Write the RTC time to the flash chip
 	spi_chip_select(&spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(&rtc);
 	uint64_t sec = (uint64_t)time.tv_sec;
+	am_util_stdio_printf("Time: %lld\r\n", sec);
+	initialize_time(&rtc);
+	struct timeval currTime;
+	gettimeofday(&currTime, NULL);
+	am_util_stdio_printf("Time of Day (sec): %lld\r\n", currTime.tv_sec);
+	am_util_stdio_printf("Time of Day (ms): %lld\r\n", currTime.tv_usec);
 	uint8_t* tmp = (uint8_t*)&sec;
 	spi_chip_select(&spi, SPI_CS_0);
 	flash_page_program(&flash, sizeof(toWrite) + 0, tmp, 8);
+	flash_wait_busy(&flash);
 
 	// Read the banner from flash
-	int size = sizeof(toWrite);
+	int size = sizeof(toWrite) + 8;
 	uint8_t buffer[size];
-	flash_read_data(&flash, 0x11, buffer, size);
+	flash_read_data(&flash, 0, buffer, size);
 	const char* buf = buffer;
-	for (int i = 0; i < size; i++) {
+	for (int i = 0; i < size - 8; i++) {
+		am_util_stdio_printf("%c", buf[i]);
+		am_util_delay_ms(10);
+	}
+	for (int i = size - 8; i < size; i++) {
 		am_util_stdio_printf("%02X", (int)buf[i]);
 		am_util_delay_ms(10);
 	}
 	am_util_stdio_printf("\r\n");
+
+	// erase data
+	flash_sector_erase(&flash, 0);
+	flash_wait_busy(&flash);
+
+	// print flash data after write
+	flash_read_data(&flash, 0, buffer, size);
+	buf = buffer;
+	am_util_stdio_printf("after erase:\r\n");
+	for (int i = 0; i < size; i++) {
+		am_util_stdio_printf("%02X ", (int) buf[i]);
+		am_util_delay_ms(10);
+	}
+	am_util_stdio_printf("\r\n");
+	am_util_stdio_printf("done\r\n");
 	return 0;
 }
