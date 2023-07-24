@@ -1,7 +1,21 @@
-# Redboard Artemis Template Project
+# Redboard Artemis Timekeeper Test
 
-This repository is a template example of how to configure a project using the
-meson-ified version of the Ambiq Suite SDK.
+This repo contains code to test a few components of the whole Timekeeper system.
+
+- Redboard Artemis (and onboard microphone)
+- RTC
+- Flash chip
+- Photoresistor
+- Temperature/pressure sensor
+
+The RTC, flash, and temperature/pressure sensor use SPI to communicate.
+The photoresistor uses the redboard's ADC. The microphone uses PDM.
+
+For the SPI CS lines:
+ *   SPI_CS_0 - pin 11 (Flash)
+ *   SPI_CS_1 - pin 17 (Temp/pressure sensor)
+ *   SPI_CS_2 - pin 14
+ *   SPI_CS_3 - pin 15 (RTC)
 
 ## Dependencies
  - https://github.com/gemarcano/AmbiqSuiteSDK
@@ -34,3 +48,4 @@ meson install
 See the license file for details. In summary, this project is licensed
 Apache-2.0, except for the bits copied from the Ambiq SDK, which is BSD
 3-clause licensed.
+
