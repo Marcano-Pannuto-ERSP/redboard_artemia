@@ -74,13 +74,16 @@ int main(void)
 	flash_init(&flash, &spi);
 	pdm_init(&pdm);
 
+	// Initialize text to be written
+	const char toWrite[] = "We're beginning\r\n";
+
 	// print the data before write
-	int size1 = 18 + 8;
-	uint8_t buffer1[size1];		// this is 4x bigger than necessary
-	flash_read_data(&flash, 0x04, buffer1, size1);
-	char* buf1 = buffer1;
+	int expectedSize = sizeof(toWrite) + 8;
+	uint8_t beforeBuf[expectedSize];		// this is 4x bigger than necessary
+	flash_read_data(&flash, 0x04, beforeBuf, expectedSize);
+	char* buf1 = beforeBuf;
 	am_util_stdio_printf("before write:\r\n");
-	for (int i = 0; i < size1; i++) {
+	for (int i = 0; i < expectedSize; i++) {
 		am_util_stdio_printf("%02X ", (int) buf1[i]);
 		am_util_delay_ms(10);
 	}
@@ -96,8 +99,6 @@ int main(void)
 
 	// Write banner to Flash
 	spi_chip_select(&spi, SPI_CS_0);
-	const char toWrite[] = "We're beginning\r\n";
-	am_util_stdio_printf("Size: %u\r\n", sizeof(toWrite));
 	flash_page_program(&flash, 0, (uint8_t*)&toWrite, sizeof(toWrite));
 	flash_wait_busy(&flash);
 	
@@ -106,11 +107,7 @@ int main(void)
 	struct timeval time = am1815_read_time(&rtc);
 	uint64_t sec = (uint64_t)time.tv_sec;
 	am_util_stdio_printf("Time: %lld\r\n", sec);
-	initialize_time(&rtc);
-	struct timeval currTime;
-	gettimeofday(&currTime, NULL);
-	am_util_stdio_printf("Time of Day (sec): %lld\r\n", currTime.tv_sec);
-	am_util_stdio_printf("Time of Day (ms): %lld\r\n", currTime.tv_usec);
+
 	uint8_t* tmp = (uint8_t*)&sec;
 	spi_chip_select(&spi, SPI_CS_0);
 	flash_page_program(&flash, sizeof(toWrite) + 0, tmp, 8);
@@ -135,7 +132,7 @@ int main(void)
 	flash_sector_erase(&flash, 0);
 	flash_wait_busy(&flash);
 
-	// print flash data after write
+	// print flash data after erase
 	flash_read_data(&flash, 0, buffer, size);
 	buf = buffer;
 	am_util_stdio_printf("after erase:\r\n");
