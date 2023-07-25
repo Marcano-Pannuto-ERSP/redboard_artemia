@@ -4,7 +4,7 @@ This repo contains code to test a few components of the whole Timekeeper system.
 
 - Redboard Artemis (and onboard microphone)
 - RTC
-- Flash chip
+- Flash chip ([datasheet](https://www.macronix.com/Lists/Datasheet/Attachments/8879/MX25V16066,%202.5V,%2016Mb,%20v1.4.pdf))
 - Photoresistor
 - Temperature/pressure sensor
 
