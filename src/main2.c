@@ -112,8 +112,13 @@ int main(void)
 
 	// Read current temperature from BMP280 sensor and write to flash
 	spi_chip_select(&spi, SPI_CS_1);
+    am_util_stdio_printf("id: %02X\r\n", bmp280_read_id(&temp));
 	uint32_t raw_temp = bmp280_get_adc_temp(&temp);
-	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);spi_chip_select(&spi, SPI_CS_0);
+    am_util_stdio_printf("raw temp: %u\r\n", raw_temp);
+    am_util_stdio_printf("compensate_temp float version: %F\r\n", bmp280_compensate_T_double(&temp, raw_temp));
+	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
+    am_util_stdio_printf("compensate_temp int version: %u\r\n", compensate_temp);
+    
 	spi_chip_select(&spi, SPI_CS_0);
 	flash_page_program(&flash, size, (uint8_t*)&compensate_temp, sizeof(compensate_temp));
 	size += 4;
