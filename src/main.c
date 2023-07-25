@@ -109,6 +109,29 @@ int main(void)
 	flash_page_program(&flash, sizeof(toWrite) + 0, tmp, 8);
 	flash_wait_busy(&flash);
 
+	// Read current temperature from BMP280 sensor and write to flash
+	spi_chip_select(&spi, SPI_CS_1);
+	uint32_t raw_temp = bmp280_get_adc_temp(&temp);
+	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
+	flash_page_program(&flash, size, (uint8_t*)&compensate_temp, sizeof(compensate_temp));
+	size += 4;
+
+	// Write the RTC time to the flash chip
+	spi_chip_select(&spi, SPI_CS_3);
+	struct timeval time = am1815_read_time(&rtc);
+	uint64_t sec = (uint64_t)time.tv_sec;
+
+	uint8_t* tmp = (uint8_t*)&sec;
+	spi_chip_select(&spi, SPI_CS_0);
+	flash_page_program(&flash, sizeof(toWrite) + 0, tmp, 8);
+	flash_wait_busy(&flash);
+	size += 8;
+
+	// uint32_t raw_press = bmp280_get_adc_pressure(&temp);
+	// am_util_stdio_printf("pressure: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
+
+
+
 	// Read the banner from flash
 	flash_read_data(&flash, 0, buffer, size);
 	buf = buffer;
