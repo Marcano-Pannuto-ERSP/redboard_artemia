@@ -61,10 +61,6 @@ static void redboard_shutdown(void)
 
 int main(void)
 {
-	// Print the banner
-	am_util_stdio_printf("Hello World!!!\r\n");
-	printf("Hello World!!!\r\n");
-
 	// Initialize all the necessary structs
 	adc_init(&adc);
 	spi_init(&spi, 0, 2000000u);
@@ -78,13 +74,13 @@ int main(void)
 	const char toWrite[] = "We're beginning\r\n";
 
 	// print the data before write
-	int expectedSize = sizeof(toWrite) + 8;
-	uint8_t beforeBuf[expectedSize];		// this is 4x bigger than necessary
-	flash_read_data(&flash, 0x04, beforeBuf, expectedSize);
-	char* buf1 = beforeBuf;
+	int size = sizeof(toWrite) + 8;
+	uint8_t buffer[size];		// this is 4x bigger than necessary
+	flash_read_data(&flash, 0x04, buffer, size);
+	char* buf = buffer;
 	am_util_stdio_printf("before write:\r\n");
-	for (int i = 0; i < expectedSize; i++) {
-		am_util_stdio_printf("%02X ", (int) buf1[i]);
+	for (int i = 0; i < size; i++) {
+		am_util_stdio_printf("%02X ", (int) buf[i]);
 		am_util_delay_ms(10);
 	}
 	am_util_stdio_printf("\r\n");
@@ -114,10 +110,8 @@ int main(void)
 	flash_wait_busy(&flash);
 
 	// Read the banner from flash
-	int size = sizeof(toWrite) + 8;
-	uint8_t buffer[size];
 	flash_read_data(&flash, 0, buffer, size);
-	const char* buf = buffer;
+	buf = buffer;
 	for (int i = 0; i < size - 8; i++) {
 		am_util_stdio_printf("%c", buf[i]);
 		am_util_delay_ms(10);
