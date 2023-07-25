@@ -27,6 +27,8 @@
 #include <flash.h>
 #include <pdm.h>
 
+# define PRINT_LENGTH 80
+
 struct uart uart;
 struct spi spi;
 struct adc adc;
@@ -79,7 +81,6 @@ void flash_print_string(struct flash *flash, struct spi *spi, uint32_t addr, siz
 	char* buf = buffer;
 	for (int i = 0; i < size-addr; i++) {
 		am_util_stdio_printf("%c", buf[i]);
-		am_util_delay_ms(10);
 	}
 	return;
 }
@@ -92,7 +93,6 @@ void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t
 	char* buf = buffer;
 	for (int i = 0; i < size-addr; i++) {
 		am_util_stdio_printf("%02X ", (int)buf[i]);
-		am_util_delay_ms(10);
 	}
 	am_util_stdio_printf("\r\n");
 	return;
@@ -113,8 +113,8 @@ int main(void)
 	const char toWrite[] = "We're beginning\r\n";
 
 	// print the data before write
-	int size = sizeof(toWrite) + 8;
-	flash_print_int(&flash, &spi, 0, size);
+	int size = sizeof(toWrite);
+	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 
 	// print the flash ID to make sure the CS is connected correctly
 	spi_chip_select(&spi, SPI_CS_0);
@@ -131,36 +131,52 @@ int main(void)
 	
 	// Write the RTC time to the flash chip
 	flash_write_time(&flash, &rtc, &spi, sizeof(toWrite));
+	size += 8;
 
 	// Read current temperature from BMP280 sensor and write to flash
 	spi_chip_select(&spi, SPI_CS_1);
-    am_util_stdio_printf("id: %02X\r\n", bmp280_read_id(&temp));
+    am_util_stdio_printf("BMP280 ID: %02X\r\n", bmp280_read_id(&temp));
 	uint32_t raw_temp = bmp280_get_adc_temp(&temp);
-    am_util_stdio_printf("raw temp: %u\r\n", raw_temp);
     am_util_stdio_printf("compensate_temp float version: %F\r\n", bmp280_compensate_T_double(&temp, raw_temp));
 	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
-    am_util_stdio_printf("compensate_temp int version: %u\r\n", compensate_temp);
     
 	spi_chip_select(&spi, SPI_CS_0);
 	flash_page_program(&flash, size, (uint8_t*)&compensate_temp, sizeof(compensate_temp));
+	flash_wait_busy(&flash);
 	size += 4;
 
 	// Write the RTC time to the flash chip
-	flash_write_time(&flash, &rtc, &spi, sizeof(toWrite));
+	flash_write_time(&flash, &rtc, &spi, size);
+	size += 8;
 
 	// uint32_t raw_press = bmp280_get_adc_pressure(&temp);
 	// am_util_stdio_printf("pressure: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
 
+	// Read current pressure from BMP280 sensor and write to flash
+	spi_chip_select(&spi, SPI_CS_1);
+	uint32_t raw_press = bmp280_get_adc_pressure(&temp);
+    am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
+	uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
+    
+	spi_chip_select(&spi, SPI_CS_0);
+	flash_page_program(&flash, size, (uint8_t*)&compensate_press, sizeof(compensate_press));
+	flash_wait_busy(&flash);
+	size += 4;
+
+	// Write the RTC time to the flash chip
+	flash_write_time(&flash, &rtc, &spi, size);
+	size += 8;
+
 	// Read the banner from flash
-	flash_print_string(&flash, &spi, 0, size - 8);
-	flash_print_int(&flash, &spi, size - 8, size);
+	flash_print_string(&flash, &spi, 0, sizeof(toWrite));
+	flash_print_int(&flash, &spi, sizeof(toWrite), PRINT_LENGTH);
 
 	// erase data
 	flash_sector_erase(&flash, 0);
 	flash_wait_busy(&flash);
 
 	// print flash data after erase
-	flash_print_int(&flash, &spi, 0, size);
+	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 	am_util_stdio_printf("done\r\n");
 	return 0;
 }
