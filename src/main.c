@@ -109,6 +109,9 @@ int main(void)
 	flash_init(&flash, &spi);
 	pdm_init(&pdm);
 
+	// Trigger the ADC to start collecting data
+	adc_trigger(&adc);
+
 	// Initialize text to be written
 	const char toWrite[] = "We're beginning\r\n";
 
@@ -139,7 +142,6 @@ int main(void)
 	uint32_t raw_temp = bmp280_get_adc_temp(&temp);
     am_util_stdio_printf("compensate_temp float version: %F\r\n", bmp280_compensate_T_double(&temp, raw_temp));
 	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
-    
 	spi_chip_select(&spi, SPI_CS_0);
 	flash_page_program(&flash, size, (uint8_t*)&compensate_temp, sizeof(compensate_temp));
 	flash_wait_busy(&flash);
@@ -149,19 +151,33 @@ int main(void)
 	flash_write_time(&flash, &rtc, &spi, size);
 	size += 8;
 
-	// uint32_t raw_press = bmp280_get_adc_pressure(&temp);
-	// am_util_stdio_printf("pressure: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
-
 	// Read current pressure from BMP280 sensor and write to flash
 	spi_chip_select(&spi, SPI_CS_1);
 	uint32_t raw_press = bmp280_get_adc_pressure(&temp);
     am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
 	uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
-    
 	spi_chip_select(&spi, SPI_CS_0);
 	flash_page_program(&flash, size, (uint8_t*)&compensate_press, sizeof(compensate_press));
 	flash_wait_busy(&flash);
 	size += 4;
+
+	// Write the RTC time to the flash chip
+	flash_write_time(&flash, &rtc, &spi, size);
+	size += 8;
+
+	// Read current resistance of the Photo Resistor and write to flash
+	uint32_t data = 0;
+	if (adc_get_sample(&adc, &data))
+	{
+		const double reference = 1.5;
+		double voltage = data * reference / ((1 << 14) - 1);
+		am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data);
+		uint32_t resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
+		am_util_stdio_printf("resistance = <%d>\r\n", resistance);
+		flash_page_program(&flash, size, (uint8_t*)&resistance, sizeof(resistance));
+		flash_wait_busy(&flash);
+		size += 4;
+	}
 
 	// Write the RTC time to the flash chip
 	flash_write_time(&flash, &rtc, &spi, size);
