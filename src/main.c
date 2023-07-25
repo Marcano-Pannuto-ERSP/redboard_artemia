@@ -59,6 +59,43 @@ static void redboard_shutdown(void)
 	// Any destructors/code that should run when main returns should go here
 }
 
+// Write the RTC time to the flash chip
+void flash_write_time(struct flash *flash, struct am1815 *am1815, struct spi *spi, uint32_t addr){
+	spi_chip_select(spi, SPI_CS_3);
+	struct timeval time = am1815_read_time(am1815);
+	uint64_t sec = (uint64_t)time.tv_sec;
+	am_util_stdio_printf("Time: %lld\r\n", sec);
+	uint8_t* tmp = (uint8_t*)&sec;
+	spi_chip_select(spi, SPI_CS_0);
+	flash_page_program(flash, addr, tmp, 8);
+	flash_wait_busy(flash);
+}
+
+void flash_print_string(struct flash *flash, struct spi *spi, uint32_t addr, size_t size){
+	spi_chip_select(spi, SPI_CS_0);
+	uint8_t buffer[size];
+	flash_read_data(flash, addr, buffer, size);
+	char* buf = buffer;
+	for (int i = 0; i < size-addr; i++) {
+		am_util_stdio_printf("%c", buf[i]);
+		am_util_delay_ms(10);
+	}
+	return;
+}
+
+void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t size){
+	spi_chip_select(spi, SPI_CS_0);
+	uint8_t buffer[size];
+	flash_read_data(flash, addr, buffer, size);
+	char* buf = buffer;
+	for (int i = 0; i < size-addr; i++) {
+		am_util_stdio_printf("%02X ", (int)buf[i]);
+		am_util_delay_ms(10);
+	}
+	am_util_stdio_printf("\r\n");
+	return;
+}
+
 int main(void)
 {
 	// Initialize all the necessary structs
@@ -75,18 +112,9 @@ int main(void)
 
 	// print the data before write
 	int size = sizeof(toWrite) + 8;
-	uint8_t buffer[size];		// this is 4x bigger than necessary
-	flash_read_data(&flash, 0x04, buffer, size);
-	char* buf = buffer;
-	am_util_stdio_printf("before write:\r\n");
-	for (int i = 0; i < size; i++) {
-		am_util_stdio_printf("%02X ", (int) buf[i]);
-		am_util_delay_ms(10);
-	}
-	am_util_stdio_printf("\r\n");
+	flash_print_int(&flash, &spi, 0, size);
 
 	// print the flash ID to make sure the CS is connected correctly
-	spi_chip_select(&spi, SPI_CS_0);
 	am_util_stdio_printf("flash ID: %02X\r\n", flash_read_id(&flash));
 
 	// print the RTC ID to make sure the CS is connected correctly
@@ -99,15 +127,7 @@ int main(void)
 	flash_wait_busy(&flash);
 	
 	// Write the RTC time to the flash chip
-	spi_chip_select(&spi, SPI_CS_3);
-	struct timeval time = am1815_read_time(&rtc);
-	uint64_t sec = (uint64_t)time.tv_sec;
-	am_util_stdio_printf("Time: %lld\r\n", sec);
-
-	uint8_t* tmp = (uint8_t*)&sec;
-	spi_chip_select(&spi, SPI_CS_0);
-	flash_page_program(&flash, sizeof(toWrite) + 0, tmp, 8);
-	flash_wait_busy(&flash);
+	flash_write_time(&flash, &rtc, &spi, sizeof(toWrite));
 
 	// Read current temperature from BMP280 sensor and write to flash
 	spi_chip_select(&spi, SPI_CS_1);
@@ -133,31 +153,15 @@ int main(void)
 
 
 	// Read the banner from flash
-	flash_read_data(&flash, 0, buffer, size);
-	buf = buffer;
-	for (int i = 0; i < size - 8; i++) {
-		am_util_stdio_printf("%c", buf[i]);
-		am_util_delay_ms(10);
-	}
-	for (int i = size - 8; i < size; i++) {
-		am_util_stdio_printf("%02X", (int)buf[i]);
-		am_util_delay_ms(10);
-	}
-	am_util_stdio_printf("\r\n");
+	flash_print_string(&flash, &spi, 0, size - 8);
+	flash_print_int(&flash, &spi, size - 8, size);
 
 	// erase data
 	flash_sector_erase(&flash, 0);
 	flash_wait_busy(&flash);
 
 	// print flash data after erase
-	flash_read_data(&flash, 0, buffer, size);
-	buf = buffer;
-	am_util_stdio_printf("after erase:\r\n");
-	for (int i = 0; i < size; i++) {
-		am_util_stdio_printf("%02X ", (int) buf[i]);
-		am_util_delay_ms(10);
-	}
-	am_util_stdio_printf("\r\n");
+	flash_print_int(&flash, &spi, 0, size);
 	am_util_stdio_printf("done\r\n");
 	return 0;
 }
