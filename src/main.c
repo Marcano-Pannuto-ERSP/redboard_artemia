@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: Gabriel Marcano, 2023
 
-/** This is an example main executable program */
-
 #include <example.h>
 
 #include <uart.h>
@@ -65,6 +63,7 @@ __attribute__((destructor))
 static void redboard_shutdown(void)
 {
 	// Any destructors/code that should run when main returns should go here
+
 }
 
 // Write the RTC time to the flash chip
@@ -134,6 +133,7 @@ int main(void)
     syscalls_littlefs_init(&fs);
 
 	// Open all the files
+	spi_chip_select(&spi, SPI_CS_0);
 	FILE * tfile = fopen("fs:/temperature_data.csv", "wa");
 	FILE * pfile = fopen("fs:/pressure_data.csv", "wa");
 	FILE * lfile = fopen("fs:/light_data.csv", "wa");
@@ -164,6 +164,7 @@ int main(void)
 	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
 	spi_chip_select(&spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(&rtc);
+	spi_chip_select(&spi, SPI_CS_0);
 	fprintf(tfile, "%u,%lld\r\n", compensate_temp, time.tv_sec);
 
 	// // Write the RTC time to the flash chip
@@ -250,8 +251,18 @@ int main(void)
 	// flash_sector_erase(&flash, 0);
 	// flash_wait_busy(&flash);
 
-	// print flash data after erase
+	
+
+	// Close files
+	spi_chip_select(&spi, SPI_CS_0);
+	fclose(tfile);
+	fclose(pfile);
+	fclose(lfile);
+	fclose(mfile);
+
+	// print flash data after close
 	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 	am_util_stdio_printf("done\r\n");
+
 	return 0;
 }

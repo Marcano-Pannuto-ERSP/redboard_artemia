@@ -1,6 +1,6 @@
-# Redboard Artemis Timekeeper Test
+# Redboard Artemis Artemia Test
 
-This repo contains code to test a few components of the whole Timekeeper system.
+This repo contains code to test a few components of the whole Artemia system.
 
 - Redboard Artemis (and onboard microphone)
 - RTC
@@ -30,6 +30,7 @@ For the SPI CS lines:
 ## Dependencies
  - https://github.com/gemarcano/AmbiqSuiteSDK
  - https://github.com/gemarcano/asimple
+ - https://github.com/mborgerding/kissfft/
 
 In order for the libraries to be found, `pkgconf` must know where they are. The
 special meson cross-file property `sys_root` is used for this, and the
