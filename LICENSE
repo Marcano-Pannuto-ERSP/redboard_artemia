@@ -3,4 +3,7 @@ they were shipped with the AmbiqSDK by SparkFun:
  - https://github.com/sparkfun/AmbiqSuiteSDK
  - https://github.com/sparkfun/Apollo3_Uploader_SVL
 
+This project uses kissfft these files are licensed under the BSD-3-Clause.
+ - https://github.com/mborgerding/kissfft/tree/master
+
 All other files are released under the Apache 2.0 license.
