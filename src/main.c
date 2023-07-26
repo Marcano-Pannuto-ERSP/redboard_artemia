@@ -134,10 +134,10 @@ int main(void)
 
 	// Open all the files
 	spi_chip_select(&spi, SPI_CS_0);
-	FILE * tfile = fopen("fs:/temperature_data.csv", "wa");
-	FILE * pfile = fopen("fs:/pressure_data.csv", "wa");
-	FILE * lfile = fopen("fs:/light_data.csv", "wa");
-	FILE * mfile = fopen("fs:/microphone_data.csv", "wa");
+	FILE * tfile = fopen("fs:/temperature_data.csv", "a+");
+	FILE * pfile = fopen("fs:/pressure_data.csv", "a+");
+	FILE * lfile = fopen("fs:/light_data.csv", "a+");
+	FILE * mfile = fopen("fs:/microphone_data.csv", "a+");
 
 	// Add CSV headers
 	fprintf(tfile, "temperature data celsius,time\r\n");
