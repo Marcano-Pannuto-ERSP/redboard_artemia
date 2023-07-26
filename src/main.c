@@ -194,10 +194,8 @@ int main(void)
     pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
     bool toggle = true;
 	uint32_t max = 0;
-	fft_N(&fft, 6922);
 	uint32_t N = fft_get_N(&fft);
-	int counter = 0;
-    while(counter < 4)
+    while(toggle)
     {
         am_hal_uart_tx_flush(uart.handle);
         am_hal_interrupt_master_disable();
@@ -205,38 +203,16 @@ int main(void)
         am_hal_interrupt_master_enable();
         if (ready)
         {
-			counter++;
             ready = false;
-            if(toggle){
-                pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer2);
-				int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer2;
-				// FFT transform
-				kiss_fft_scalar in[N];
-				kiss_fft_cpx out[N / 2 + 1];
-				for (int j = 0; j < N; j++){
-					in[j] = pi16PDMData[j];
-				}
-				uint32_t toReturn = TestFftReal(&fft, in, out);
-				if(toReturn > max){
-					max = toReturn;
-				}
-                toggle = false;
-            }
-            else{
-                pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
-				int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer1;
-				// FFT transform
-				kiss_fft_scalar in[N];
-				kiss_fft_cpx out[N / 2 + 1];
-				for (int j = 0; j < N; j++){
-					in[j] = pi16PDMData[j];
-				}
-				uint32_t toReturn = TestFftReal(&fft, in, out);
-				if(toReturn > max){
-					max = toReturn;
-				}
-                toggle = true;
-            }
+			int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer1;
+			// FFT transform
+			kiss_fft_scalar in[N];
+			kiss_fft_cpx out[N / 2 + 1];
+			for (int j = 0; j < N; j++){
+				in[j] = pi16PDMData[j];
+			}
+			max = TestFftReal(&fft, in, out);
+			toggle = false;
         }
         // Go to Deep Sleep.
         am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);

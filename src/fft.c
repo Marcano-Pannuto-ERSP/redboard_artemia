@@ -9,7 +9,7 @@
 // Initialize FFT structure
 void fft_init(struct fft *fft)
 {
-    fft->N = (40960/2);
+    fft->N = 512;
     fft->S = 7813;
 }
 
