@@ -32,10 +32,14 @@ asimple_lib = dependency('asimple_rba_atp')
 # This section is for building most of the program as a library
 lib_sources = files([
   'src/example.c',
+  'src/fft.c',
+  'src/kiss_fftr.c',
+  'src/kiss_fft.c',
 ])
 
 includes = include_directories([
   'include/example',
+  'include/kiss_fft',
 ])
 
 lib = library(meson.project_name(),

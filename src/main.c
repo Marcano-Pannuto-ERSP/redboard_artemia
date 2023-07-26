@@ -26,6 +26,8 @@
 #include <bmp280.h>
 #include <flash.h>
 #include <pdm.h>
+#include <fft.h>
+#include <kiss_fftr.h>
 
 # define PRINT_LENGTH 80
 
@@ -36,6 +38,7 @@ struct am1815 rtc;
 struct bmp280 temp;
 struct flash flash;
 struct pdm pdm;
+struct fft fft;
 
 __attribute__((constructor))
 static void redboard_init(void)
@@ -108,6 +111,7 @@ int main(void)
 	bmp280_init(&temp, &spi);
 	flash_init(&flash, &spi);
 	pdm_init(&pdm);
+	fft_init(&fft);
 
 	// Trigger the ADC to start collecting data
 	adc_trigger(&adc);
@@ -178,6 +182,70 @@ int main(void)
 		flash_wait_busy(&flash);
 		size += 4;
 	}
+
+	// Write the RTC time to the flash chip
+	flash_write_time(&flash, &rtc, &spi, size);
+	size += 8;
+
+	// MICROHPONE STUFF -------------------------------------------------------------------------------------------------------------------------
+    // Turn on the PDM, set it up for our chosen recording settings, and start
+    // the first DMA transaction.
+    am_hal_pdm_fifo_flush(pdm.PDMHandle);
+    pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
+    bool toggle = true;
+	uint32_t max = 0;
+	fft_N(&fft, 6922);
+	uint32_t N = fft_get_N(&fft);
+	int counter = 0;
+    while(counter < 4)
+    {
+        am_hal_uart_tx_flush(uart.handle);
+        am_hal_interrupt_master_disable();
+        bool ready = isPDMDataReady();
+        am_hal_interrupt_master_enable();
+        if (ready)
+        {
+			counter++;
+            ready = false;
+            if(toggle){
+                pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer2);
+				int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer2;
+				// FFT transform
+				kiss_fft_scalar in[N];
+				kiss_fft_cpx out[N / 2 + 1];
+				for (int j = 0; j < N; j++){
+					in[j] = pi16PDMData[j];
+				}
+				uint32_t toReturn = TestFftReal(&fft, in, out);
+				if(toReturn > max){
+					max = toReturn;
+				}
+                toggle = false;
+            }
+            else{
+                pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
+				int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer1;
+				// FFT transform
+				kiss_fft_scalar in[N];
+				kiss_fft_cpx out[N / 2 + 1];
+				for (int j = 0; j < N; j++){
+					in[j] = pi16PDMData[j];
+				}
+				uint32_t toReturn = TestFftReal(&fft, in, out);
+				if(toReturn > max){
+					max = toReturn;
+				}
+                toggle = true;
+            }
+        }
+        // Go to Deep Sleep.
+        am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+    }
+
+	// Save the frequency with highest amplitude to flash
+	flash_page_program(&flash, size, (uint8_t*)&max, sizeof(max));
+	flash_wait_busy(&flash);
+	size += 4;
 
 	// Write the RTC time to the flash chip
 	flash_write_time(&flash, &rtc, &spi, size);
