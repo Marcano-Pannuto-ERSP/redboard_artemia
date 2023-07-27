@@ -64,7 +64,8 @@ static void redboard_shutdown(void)
 }
 
 // Write the RTC time to the flash chip
-void flash_write_time(struct flash *flash, struct am1815 *am1815, struct spi *spi, uint32_t addr){
+void flash_write_time(struct flash *flash, struct am1815 *am1815, struct spi *spi, uint32_t addr)
+{
 	spi_chip_select(spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(am1815);
 	uint64_t sec = (uint64_t)time.tv_sec;
@@ -76,7 +77,8 @@ void flash_write_time(struct flash *flash, struct am1815 *am1815, struct spi *sp
 }
 
 // Print the flash data as strings
-void flash_print_string(struct flash *flash, struct spi *spi, uint32_t addr, size_t size){
+void flash_print_string(struct flash *flash, struct spi *spi, uint32_t addr, size_t size)
+{
 	spi_chip_select(spi, SPI_CS_0);
 	uint8_t buffer[size];
 	flash_read_data(flash, addr, buffer, size);
@@ -88,7 +90,8 @@ void flash_print_string(struct flash *flash, struct spi *spi, uint32_t addr, siz
 }
 
 // Print the flash data as hex
-void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t size){
+void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t size)
+{
 	spi_chip_select(spi, SPI_CS_0);
 	uint8_t buffer[size];
 	flash_read_data(flash, addr, buffer, size);
@@ -98,6 +101,21 @@ void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t
 	}
 	am_util_stdio_printf("\r\n");
 	return;
+}
+
+// Add headers to the file if there isn't one already
+void add_headers(char headers[][40], FILE * files[], size_t size)
+{
+    for(size_t i = 0; i < size; i++){
+        fseek(files[i], 0, SEEK_SET);
+        int len = strlen(headers[i]);
+        char buffer[len];
+        fread(buffer, len, 1, files[i]);
+        if(strncmp(headers[i], buffer, len) != 0){
+            fprintf(files[i], "%s", headers[i]);
+        }
+        fseek(files[i], 0, SEEK_END);
+    }
 }
 
 // Convert tv_sec, which is a long representing seconds, to a string in buffer
@@ -160,12 +178,11 @@ int main(void)
 	FILE * pfile = fopen("fs:/pressure_data.csv", "a+");
 	FILE * lfile = fopen("fs:/light_data.csv", "a+");
 	FILE * mfile = fopen("fs:/microphone_data.csv", "a+");
+	FILE * files[4] = {tfile, pfile, lfile, mfile};
 
 	// Add CSV headers
-	fprintf(tfile, "temperature data celsius,time\r\n");
-	fprintf(pfile, "pressure data pascals,time\r\n");
-	fprintf(lfile, "light data ohms,time\r\n");
-	fprintf(mfile, "microphone data Hz,time\r\n");
+	char headers[4][40] = {"temperature data celsius,time\r\n", "pressure data pascals,time\r\n", "light data ohms,time\r\n", "microphone data Hz,time\r\n"};
+	add_headers(headers, files, 4);
 
 	// Trigger the ADC to start collecting data
 	adc_trigger(&adc);
@@ -209,7 +226,6 @@ int main(void)
 	}
 	write_csv_line(lfile, resistance);
 
-	// MICROPHONE  ---------------------------------------------------------------------------------------------------------------------
     // Turn on the PDM and start the first DMA transaction.
     am_hal_pdm_fifo_flush(pdm.PDMHandle);
     pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
@@ -239,10 +255,6 @@ int main(void)
     }
 	// Save frequency with highest amplitude to flash
 	write_csv_line(mfile, max);
-
-	// // Read the banner from flash
-	// flash_print_string(&flash, &spi, 0, sizeof(toWrite));
-	// flash_print_int(&flash, &spi, sizeof(toWrite), PRINT_LENGTH);
 
 	// Close files
 	spi_chip_select(&spi, SPI_CS_0);
