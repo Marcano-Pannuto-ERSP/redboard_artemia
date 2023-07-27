@@ -105,6 +105,20 @@ void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t
 	return;
 }
 
+// Convert tv_sec, which is a long representing seconds, to a string in buffer
+// Make sure to initialize buffer before calling
+// uint8_t buffer[21] = {0};
+void time_to_string(uint8_t buffer[21], uint64_t tv_sec) {
+	// This is one way to prepare an uint64_t as a string
+	int max = ceil(log10(tv_sec));
+	uint64_t tmp = tv_sec;
+	for (uint8_t *c = buffer + max - 1; c >= buffer; --c)
+	{
+		*c = '0' + (tmp % 10);
+		tmp /= 10;
+	}
+}
+
 int main(void)
 {
 	// Initialize all the necessary structs
@@ -158,105 +172,95 @@ int main(void)
 	spi_chip_select(&spi, SPI_CS_3);
 	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(&rtc, 0x28));
 
-	// Read current temperature from BMP280 sensor and write to flash
+	// Print BMP280 ID
 	spi_chip_select(&spi, SPI_CS_1);
     am_util_stdio_printf("BMP280 ID: %02X\r\n", bmp280_read_id(&temp));
+
+	// Read current temperature from BMP280 sensor
 	uint32_t raw_temp = bmp280_get_adc_temp(&temp);
     am_util_stdio_printf("compensate_temp float version: %F\r\n", bmp280_compensate_T_double(&temp, raw_temp));
 	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
+
+	// Get current time and write temp,time to flash
 	spi_chip_select(&spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(&rtc);
 	spi_chip_select(&spi, SPI_CS_0);
-
-	// FIXME wrap this in a function???
-	// This is one way to prepare an uint64_t as a string
-	int max = ceil(log10(time.tv_sec));
-	uint8_t buffer[21] = {0}; // log_10(2^64) is just under 20, and an extra character for null
-	uint64_t tmp = time.tv_sec;
-	for (uint8_t *c = buffer + max - 1; c >= buffer; --c)
-	{
-		*c = '0' + (tmp % 10);
-		tmp /= 10;
-	}
-
+	uint8_t buffer[21] = {0};
+	time_to_string(buffer, (uint64_t) time.tv_sec);
 	printf("time: %s\r\n", (const char*)buffer);
 	fprintf(tfile, "%u,%s\r\n", compensate_temp, buffer);
 
-	// // Write the RTC time to the flash chip
-	// flash_write_time(&flash, &rtc, &spi, size);
-	// size += 8;
+	// Read current pressure from BMP280 sensor and write to flash
+	spi_chip_select(&spi, SPI_CS_1);
+	uint32_t raw_press = bmp280_get_adc_pressure(&temp);
+    am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
+	uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
 
-	// // Read current pressure from BMP280 sensor and write to flash
-	// spi_chip_select(&spi, SPI_CS_1);
-	// uint32_t raw_press = bmp280_get_adc_pressure(&temp);
-    // am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
-	// uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
-	// spi_chip_select(&spi, SPI_CS_0);
-	// flash_page_program(&flash, size, (uint8_t*)&compensate_press, sizeof(compensate_press));
-	// flash_wait_busy(&flash);
-	// size += 4;
+	spi_chip_select(&spi, SPI_CS_3);
+	struct timeval time = am1815_read_time(&rtc);
+	spi_chip_select(&spi, SPI_CS_0);
+	uint8_t buffer[21] = {0};
+	time_to_string(buffer, (uint64_t) time.tv_sec);
+	fprintf(pfile, "%u,%s\r\n", compensate_press, buffer);
 
-	// // Write the RTC time to the flash chip
-	// flash_write_time(&flash, &rtc, &spi, size);
-	// size += 8;
+	// Read current resistance of the Photo Resistor and write to flash
+	uint32_t data = 0;
+	uint32_t resistance;
+	if (adc_get_sample(&adc, &data))
+	{
+		const double reference = 1.5;
+		double voltage = data * reference / ((1 << 14) - 1);
+		am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data);
+		resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
+		am_util_stdio_printf("resistance = <%d>\r\n", resistance);
+		// flash_page_program(&flash, size, (uint8_t*)&resistance, sizeof(resistance));
+		flash_wait_busy(&flash);
+	}
 
-	// // Read current resistance of the Photo Resistor and write to flash
-	// uint32_t data = 0;
-	// if (adc_get_sample(&adc, &data))
-	// {
-	// 	const double reference = 1.5;
-	// 	double voltage = data * reference / ((1 << 14) - 1);
-	// 	am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data);
-	// 	uint32_t resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
-	// 	am_util_stdio_printf("resistance = <%d>\r\n", resistance);
-	// 	flash_page_program(&flash, size, (uint8_t*)&resistance, sizeof(resistance));
-	// 	flash_wait_busy(&flash);
-	// 	size += 4;
-	// }
+	spi_chip_select(&spi, SPI_CS_3);
+	struct timeval time = am1815_read_time(&rtc);
+	spi_chip_select(&spi, SPI_CS_0);
+	uint8_t buffer[21] = {0};
+	time_to_string(buffer, (uint64_t) time.tv_sec);
+	fprintf(lfile, "%u,%s\r\n", resistance, buffer);
 
-	// // Write the RTC time to the flash chip
-	// flash_write_time(&flash, &rtc, &spi, size);
-	// size += 8;
-
-	// // MICROHPONE STUFF -------------------------------------------------------------------------------------------------------------------------
-    // // Turn on the PDM, set it up for our chosen recording settings, and start
-    // // the first DMA transaction.
-    // am_hal_pdm_fifo_flush(pdm.PDMHandle);
-    // pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
-    // bool toggle = true;
-	// uint32_t max = 0;
-	// uint32_t N = fft_get_N(&fft);
-    // while(toggle)
-    // {
-    //     am_hal_uart_tx_flush(uart.handle);
-    //     am_hal_interrupt_master_disable();
-    //     bool ready = isPDMDataReady();
-    //     am_hal_interrupt_master_enable();
-    //     if (ready)
-    //     {
-    //         ready = false;
-	// 		int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer1;
-	// 		// FFT transform
-	// 		kiss_fft_scalar in[N];
-	// 		kiss_fft_cpx out[N / 2 + 1];
-	// 		for (int j = 0; j < N; j++){
-	// 			in[j] = pi16PDMData[j];
-	// 		}
-	// 		max = TestFftReal(&fft, in, out);
-	// 		toggle = false;
-    //     }
-    //     // Go to Deep Sleep.
-    //     am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
-    // }
-
-	// // Save the frequency with highest amplitude to flash
-	// flash_page_program(&flash, size, (uint8_t*)&max, sizeof(max));
-	// flash_wait_busy(&flash);
-	// size += 4;
-
-	// // Write the RTC time to the flash chip
-	// flash_write_time(&flash, &rtc, &spi, size);
-	// size += 8;
+	// MICROPHONE STUFF -------------------------------------------------------------------------------------------------------------------------
+    // Turn on the PDM, set it up for our chosen recording settings, and start
+    // the first DMA transaction.
+    am_hal_pdm_fifo_flush(pdm.PDMHandle);
+    pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
+    bool toggle = true;
+	uint32_t max = 0;
+	uint32_t N = fft_get_N(&fft);
+    while(toggle)
+    {
+        am_hal_uart_tx_flush(uart.handle);
+        am_hal_interrupt_master_disable();
+        bool ready = isPDMDataReady();
+        am_hal_interrupt_master_enable();
+        if (ready)
+        {
+            ready = false;
+			int16_t *pi16PDMData = (int16_t *)pdm.g_ui32PDMDataBuffer1;
+			// FFT transform
+			kiss_fft_scalar in[N];
+			kiss_fft_cpx out[N / 2 + 1];
+			for (int j = 0; j < N; j++){
+				in[j] = pi16PDMData[j];
+			}
+			max = TestFftReal(&fft, in, out);
+			toggle = false;
+        }
+        // Go to Deep Sleep.
+        am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+    }
+	// Save frequency with highest amplitude to flash
+	spi_chip_select(&spi, SPI_CS_3);
+	struct timeval time = am1815_read_time(&rtc);
+	spi_chip_select(&spi, SPI_CS_0);
+	uint8_t buffer[21] = {0};
+	time_to_string(buffer, (uint64_t) time.tv_sec);
+	fprintf(mfile, "%u,%s\r\n", max, buffer);
 
 	// // Read the banner from flash
 	// flash_print_string(&flash, &spi, 0, sizeof(toWrite));
