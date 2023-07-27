@@ -27,8 +27,6 @@
 #include <fft.h>
 #include <kiss_fftr.h>
 
-#define PRINT_LENGTH 80
-
 struct uart uart;
 struct spi spi;
 struct adc adc;
@@ -100,7 +98,7 @@ void write_csv_line(FILE * fp, uint32_t data) {
 	spi_chip_select(&spi, SPI_CS_0);
 	uint8_t buffer[21] = {0};
 	time_to_string(buffer, (uint64_t) time.tv_sec);
-	fprintf(fp, "%u,%s\r\n", data, buffer);
+	fprintf(fp, "%lu,%s\r\n", data, buffer);
 }
 
 int main(void)
@@ -114,9 +112,6 @@ int main(void)
 	flash_init(&flash, &spi);
 	pdm_init(&pdm);
 	fft_init(&fft);
-
-	// print the data before write
-	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 
 	// Mount littlefs
     asimple_littlefs_init(&fs, &flash);
@@ -201,7 +196,7 @@ int main(void)
 			// FFT transform
 			kiss_fft_scalar in[N];
 			kiss_fft_cpx out[N / 2 + 1];
-			for (int j = 0; j < N; j++){
+			for (uint32_t j = 0; j < N; j++){
 				in[j] = pi16PDMData[j];
 			}
 			max = TestFftReal(&fft, in, out);
@@ -219,8 +214,6 @@ int main(void)
 	fclose(lfile);
 	fclose(mfile);
 
-	// print flash data after close
-	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 	am_util_stdio_printf("done\r\n");
 
 	return 0;
