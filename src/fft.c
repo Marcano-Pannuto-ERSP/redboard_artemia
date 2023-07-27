@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: Gabriel Marcano, 2023
+// SPDX-FileCopyrightText: Kristin Ebuengan, 2023
+// SPDX-FileCopyrightText: Melody Gill, 2023
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

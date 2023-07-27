@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: Gabriel Marcano, 2023
+// SPDX-FileCopyrightText: Kristin Ebuengan, 2023
+// SPDX-FileCopyrightText: Melody Gill, 2023
 
 #include <example.h>
 
@@ -165,7 +167,7 @@ int main(void)
 	spi_chip_select(&spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(&rtc);
 	spi_chip_select(&spi, SPI_CS_0);
-	fprintf(tfile, "%u,%lld\r\n", compensate_temp, time.tv_sec);
+	fprintf(tfile, "%u,%lld\r\n", compensate_temp, (uint64_t)time.tv_sec);
 
 	// // Write the RTC time to the flash chip
 	// flash_write_time(&flash, &rtc, &spi, size);
