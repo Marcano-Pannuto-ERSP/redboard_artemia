@@ -63,46 +63,6 @@ static void redboard_shutdown(void)
 	// Any destructors/code that should run when main returns should go here
 }
 
-// Write the RTC time to the flash chip
-void flash_write_time(struct flash *flash, struct am1815 *am1815, struct spi *spi, uint32_t addr)
-{
-	spi_chip_select(spi, SPI_CS_3);
-	struct timeval time = am1815_read_time(am1815);
-	uint64_t sec = (uint64_t)time.tv_sec;
-	am_util_stdio_printf("Time: %lld\r\n", sec);
-	uint8_t* tmp = (uint8_t*)&sec;
-	spi_chip_select(spi, SPI_CS_0);
-	flash_page_program(flash, addr, tmp, 8);
-	flash_wait_busy(flash);
-}
-
-// Print the flash data as strings
-void flash_print_string(struct flash *flash, struct spi *spi, uint32_t addr, size_t size)
-{
-	spi_chip_select(spi, SPI_CS_0);
-	uint8_t buffer[size];
-	flash_read_data(flash, addr, buffer, size);
-	char* buf = buffer;
-	for (int i = 0; i < size-addr; i++) {
-		am_util_stdio_printf("%c", buf[i]);
-	}
-	return;
-}
-
-// Print the flash data as hex
-void flash_print_int(struct flash *flash, struct spi *spi, uint32_t addr, size_t size)
-{
-	spi_chip_select(spi, SPI_CS_0);
-	uint8_t buffer[size];
-	flash_read_data(flash, addr, buffer, size);
-	char* buf = buffer;
-	for (int i = 0; i < size-addr; i++) {
-		am_util_stdio_printf("%02X ", (int)buf[i]);
-	}
-	am_util_stdio_printf("\r\n");
-	return;
-}
-
 // Add headers to the file if there isn't one already
 void add_headers(char headers[][40], FILE * files[], size_t size)
 {
