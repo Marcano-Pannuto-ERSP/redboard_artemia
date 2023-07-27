@@ -173,12 +173,11 @@ int main(void)
 		am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data);
 		resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
 		am_util_stdio_printf("resistance = <%d>\r\n", resistance);
-		flash_wait_busy(&flash);
 	}
 	write_csv_line(lfile, resistance);
 
     // Turn on the PDM and start the first DMA transaction.
-    am_hal_pdm_fifo_flush(pdm.PDMHandle);
+    pdm_flush(&pdm);
     pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
     bool toggle = true;
 	uint32_t max = 0;
