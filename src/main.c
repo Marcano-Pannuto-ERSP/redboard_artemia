@@ -167,7 +167,20 @@ int main(void)
 	spi_chip_select(&spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(&rtc);
 	spi_chip_select(&spi, SPI_CS_0);
-	fprintf(tfile, "%u,%lld\r\n", compensate_temp, (uint64_t)time.tv_sec);
+
+	// FIXME wrap this in a function???
+	// This is one way to prepare an uint64_t as a string
+	int max = ceil(log10(time.tv_sec));
+	uint8_t buffer[21] = {0}; // log_10(2^64) is just under 20, and an extra character for null
+	uint64_t tmp = time.tv_sec;
+	for (uint8_t *c = buffer + max - 1; c >= buffer; --c)
+	{
+		*c = '0' + (tmp % 10);
+		tmp /= 10;
+	}
+
+	printf("time: %s\r\n", (const char*)buffer);
+	fprintf(tfile, "%u,%s\r\n", compensate_temp, buffer);
 
 	// // Write the RTC time to the flash chip
 	// flash_write_time(&flash, &rtc, &spi, size);
