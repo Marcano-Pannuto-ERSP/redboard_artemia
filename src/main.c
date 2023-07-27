@@ -119,6 +119,17 @@ void time_to_string(uint8_t buffer[21], uint64_t tv_sec) {
 	}
 }
 
+// Write a line to fp in the format "data,time\n"
+// Gets time from the RTC
+void write_csv_line(FILE * fp, uint32_t data) {
+	spi_chip_select(&spi, SPI_CS_3);
+	struct timeval time = am1815_read_time(&rtc);
+	spi_chip_select(&spi, SPI_CS_0);
+	uint8_t buffer[21] = {0};
+	time_to_string(buffer, (uint64_t) time.tv_sec);
+	fprintf(fp, "%u,%s\r\n", data, buffer);
+}
+
 int main(void)
 {
 	// Initialize all the necessary structs
@@ -176,32 +187,18 @@ int main(void)
 	spi_chip_select(&spi, SPI_CS_1);
     am_util_stdio_printf("BMP280 ID: %02X\r\n", bmp280_read_id(&temp));
 
-	// Read current temperature from BMP280 sensor
+	// Read current temperature from BMP280 sensor and write to flash
 	uint32_t raw_temp = bmp280_get_adc_temp(&temp);
     am_util_stdio_printf("compensate_temp float version: %F\r\n", bmp280_compensate_T_double(&temp, raw_temp));
 	uint32_t compensate_temp = (uint32_t) (bmp280_compensate_T_double(&temp, raw_temp) * 1000);
-
-	// Get current time and write temp,time to flash
-	spi_chip_select(&spi, SPI_CS_3);
-	struct timeval time = am1815_read_time(&rtc);
-	spi_chip_select(&spi, SPI_CS_0);
-	uint8_t buffer[21] = {0};
-	time_to_string(buffer, (uint64_t) time.tv_sec);
-	printf("time: %s\r\n", (const char*)buffer);
-	fprintf(tfile, "%u,%s\r\n", compensate_temp, buffer);
+	write_csv_line(tfile, compensate_temp);
 
 	// Read current pressure from BMP280 sensor and write to flash
 	spi_chip_select(&spi, SPI_CS_1);
 	uint32_t raw_press = bmp280_get_adc_pressure(&temp);
     am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
 	uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
-
-	spi_chip_select(&spi, SPI_CS_3);
-	struct timeval time = am1815_read_time(&rtc);
-	spi_chip_select(&spi, SPI_CS_0);
-	uint8_t buffer[21] = {0};
-	time_to_string(buffer, (uint64_t) time.tv_sec);
-	fprintf(pfile, "%u,%s\r\n", compensate_press, buffer);
+	write_csv_line(tfile, compensate_press);
 
 	// Read current resistance of the Photo Resistor and write to flash
 	uint32_t data = 0;
@@ -216,13 +213,7 @@ int main(void)
 		// flash_page_program(&flash, size, (uint8_t*)&resistance, sizeof(resistance));
 		flash_wait_busy(&flash);
 	}
-
-	spi_chip_select(&spi, SPI_CS_3);
-	struct timeval time = am1815_read_time(&rtc);
-	spi_chip_select(&spi, SPI_CS_0);
-	uint8_t buffer[21] = {0};
-	time_to_string(buffer, (uint64_t) time.tv_sec);
-	fprintf(lfile, "%u,%s\r\n", resistance, buffer);
+	write_csv_line(lfile, resistance);
 
 	// MICROPHONE STUFF -------------------------------------------------------------------------------------------------------------------------
     // Turn on the PDM, set it up for our chosen recording settings, and start
@@ -255,12 +246,7 @@ int main(void)
         am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
     }
 	// Save frequency with highest amplitude to flash
-	spi_chip_select(&spi, SPI_CS_3);
-	struct timeval time = am1815_read_time(&rtc);
-	spi_chip_select(&spi, SPI_CS_0);
-	uint8_t buffer[21] = {0};
-	time_to_string(buffer, (uint64_t) time.tv_sec);
-	fprintf(mfile, "%u,%s\r\n", max, buffer);
+	write_csv_line(mfile, max);
 
 	// // Read the banner from flash
 	// flash_print_string(&flash, &spi, 0, sizeof(toWrite));
@@ -269,8 +255,6 @@ int main(void)
 	// // erase data
 	// flash_sector_erase(&flash, 0);
 	// flash_wait_busy(&flash);
-
-	
 
 	// Close files
 	spi_chip_select(&spi, SPI_CS_0);
