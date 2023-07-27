@@ -28,7 +28,10 @@
 #include <kiss_fftr.h>
 
 struct uart uart;
-struct spi spi;
+struct spi_bus spi_bus;
+struct spi_device flash_spi;
+struct spi_device bmp280_spi;
+struct spi_device rtc_spi;
 struct adc adc;
 struct am1815 rtc;
 struct bmp280 temp;
@@ -93,9 +96,7 @@ void time_to_string(uint8_t buffer[21], uint64_t tv_sec) {
 // Write a line to fp in the format "data,time\n"
 // Gets time from the RTC
 void write_csv_line(FILE * fp, uint32_t data) {
-	spi_chip_select(&spi, SPI_CS_3);
 	struct timeval time = am1815_read_time(&rtc);
-	spi_chip_select(&spi, SPI_CS_0);
 	uint8_t buffer[21] = {0};
 	time_to_string(buffer, (uint64_t) time.tv_sec);
 	fprintf(fp, "%s,%lu\r\n", buffer, data);
@@ -105,11 +106,14 @@ int main(void)
 {
 	// Initialize all the necessary structs
 	adc_init(&adc);
-	spi_init(&spi, 0, 2000000u);
-	spi_enable(&spi);
-	am1815_init(&rtc, &spi);
-	bmp280_init(&temp, &spi);
-	flash_init(&flash, &spi);
+	spi_bus_init(&spi_bus, 0);
+	spi_bus_enable(&spi_bus);
+	spi_bus_init_device(&spi_bus, &flash_spi, SPI_CS_0, 4000000u);
+	spi_bus_init_device(&spi_bus, &bmp280_spi, SPI_CS_1, 4000000u);
+	spi_bus_init_device(&spi_bus, &rtc_spi, SPI_CS_3, 2000000u);
+	am1815_init(&rtc, &rtc_spi);
+	bmp280_init(&temp, &bmp280_spi);
+	flash_init(&flash, &flash_spi);
 	pdm_init(&pdm);
 	fft_init(&fft);
 
@@ -124,7 +128,6 @@ int main(void)
     syscalls_littlefs_init(&fs);
 
 	// Open all the files
-	spi_chip_select(&spi, SPI_CS_0);
 	FILE * tfile = fopen("fs:/temperature_data.csv", "a+");
 	FILE * pfile = fopen("fs:/pressure_data.csv", "a+");
 	FILE * lfile = fopen("fs:/light_data.csv", "a+");
@@ -139,15 +142,12 @@ int main(void)
 	adc_trigger(&adc);
 
 	// print the flash ID to make sure the CS is connected correctly
-	spi_chip_select(&spi, SPI_CS_0);
 	am_util_stdio_printf("flash ID: %02X\r\n", flash_read_id(&flash));
 
 	// print the RTC ID to make sure the CS is connected correctly
-	spi_chip_select(&spi, SPI_CS_3);
 	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(&rtc, 0x28));
 
 	// Print BMP280 ID
-	spi_chip_select(&spi, SPI_CS_1);
     am_util_stdio_printf("BMP280 ID: %02X\r\n", bmp280_read_id(&temp));
 
 	// Read current temperature from BMP280 sensor and write to flash
@@ -157,7 +157,6 @@ int main(void)
 	write_csv_line(tfile, compensate_temp);
 
 	// Read current pressure from BMP280 sensor and write to flash
-	spi_chip_select(&spi, SPI_CS_1);
 	uint32_t raw_press = bmp280_get_adc_pressure(&temp);
     am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
 	uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
@@ -207,7 +206,6 @@ int main(void)
 	write_csv_line(mfile, max);
 
 	// Close files
-	spi_chip_select(&spi, SPI_CS_0);
 	fclose(tfile);
 	fclose(pfile);
 	fclose(lfile);
