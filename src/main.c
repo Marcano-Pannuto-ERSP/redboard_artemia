@@ -115,10 +115,6 @@ int main(void)
 	pdm_init(&pdm);
 	fft_init(&fft);
 
-	// erase data
-	flash_sector_erase(&flash, 0);
-	flash_wait_busy(&flash);
-
 	// print the data before write
 	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 
