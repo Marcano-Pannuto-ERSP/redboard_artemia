@@ -98,7 +98,7 @@ void write_csv_line(FILE * fp, uint32_t data) {
 	spi_chip_select(&spi, SPI_CS_0);
 	uint8_t buffer[21] = {0};
 	time_to_string(buffer, (uint64_t) time.tv_sec);
-	fprintf(fp, "%lu,%s\r\n", data, buffer);
+	fprintf(fp, "%s,%lu\r\n", buffer, data);
 }
 
 int main(void)
@@ -161,7 +161,7 @@ int main(void)
 	uint32_t raw_press = bmp280_get_adc_pressure(&temp);
     am_util_stdio_printf("compensate_press float version: %F\r\n", bmp280_compensate_P_double(&temp, raw_press, raw_temp));
 	uint32_t compensate_press = (uint32_t) (bmp280_compensate_P_double(&temp, raw_press, raw_temp));
-	write_csv_line(tfile, compensate_press);
+	write_csv_line(pfile, compensate_press);
 
 	// Read current resistance of the Photo Resistor and write to flash
 	uint32_t data = 0;
