@@ -3,23 +3,18 @@
 // SPDX-FileCopyrightText: Kristin Ebuengan, 2023
 // SPDX-FileCopyrightText: Melody Gill, 2023
 
-#include <example.h>
-
-#include <uart.h>
-#include <syscalls.h>
-
 #include "am_mcu_apollo.h"
 #include "am_bsp.h"
 #include "am_util.h"
 
 #include <sys/time.h>
-
 #include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <time.h>
 
+#include <uart.h>
 #include <spi.h>
 #include <adc.h>
 #include <am1815.h>
@@ -28,10 +23,11 @@
 #include <pdm.h>
 #include <syscalls.h>
 #include <asimple_littlefs.h>
+
 #include <fft.h>
 #include <kiss_fftr.h>
 
-# define PRINT_LENGTH 80
+#define PRINT_LENGTH 80
 
 struct uart uart;
 struct spi spi;
@@ -65,7 +61,6 @@ __attribute__((destructor))
 static void redboard_shutdown(void)
 {
 	// Any destructors/code that should run when main returns should go here
-
 }
 
 // Write the RTC time to the flash chip
@@ -149,7 +144,7 @@ int main(void)
 	// print the data before write
 	flash_print_int(&flash, &spi, 0, PRINT_LENGTH);
 
-	// Struct asimple_littlefs fs; defined earlier
+	// Mount littlefs
     asimple_littlefs_init(&fs, &flash);
     int err = asimple_littlefs_mount(&fs);
     if (err < 0)
@@ -210,14 +205,12 @@ int main(void)
 		am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data);
 		resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
 		am_util_stdio_printf("resistance = <%d>\r\n", resistance);
-		// flash_page_program(&flash, size, (uint8_t*)&resistance, sizeof(resistance));
 		flash_wait_busy(&flash);
 	}
 	write_csv_line(lfile, resistance);
 
-	// MICROPHONE STUFF -------------------------------------------------------------------------------------------------------------------------
-    // Turn on the PDM, set it up for our chosen recording settings, and start
-    // the first DMA transaction.
+	// MICROPHONE  ---------------------------------------------------------------------------------------------------------------------
+    // Turn on the PDM and start the first DMA transaction.
     am_hal_pdm_fifo_flush(pdm.PDMHandle);
     pdm_data_get(&pdm, pdm.g_ui32PDMDataBuffer1);
     bool toggle = true;
@@ -242,7 +235,6 @@ int main(void)
 			max = TestFftReal(&fft, in, out);
 			toggle = false;
         }
-        // Go to Deep Sleep.
         am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
     }
 	// Save frequency with highest amplitude to flash
@@ -251,10 +243,6 @@ int main(void)
 	// // Read the banner from flash
 	// flash_print_string(&flash, &spi, 0, sizeof(toWrite));
 	// flash_print_int(&flash, &spi, sizeof(toWrite), PRINT_LENGTH);
-
-	// // erase data
-	// flash_sector_erase(&flash, 0);
-	// flash_wait_busy(&flash);
 
 	// Close files
 	spi_chip_select(&spi, SPI_CS_0);
