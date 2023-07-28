@@ -3,10 +3,10 @@
 This repo contains code to test a few components of the whole Artemia system.
 
 - Redboard Artemis (and onboard microphone)
-- RTC
+- RTC ([datasheet](https://ambiq.com/artasie-am1815/))
 - Flash chip ([datasheet](https://www.macronix.com/Lists/Datasheet/Attachments/8879/MX25V16066,%202.5V,%2016Mb,%20v1.4.pdf))
 - Photoresistor
-- Temperature/pressure sensor
+- Temperature/pressure sensor ([datasheet](https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf))
 
 The RTC, flash, and temperature/pressure sensor use SPI to communicate.
 The photoresistor uses the redboard's ADC. The microphone uses PDM.

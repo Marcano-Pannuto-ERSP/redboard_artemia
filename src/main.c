@@ -3,6 +3,11 @@
 // SPDX-FileCopyrightText: Kristin Ebuengan, 2023
 // SPDX-FileCopyrightText: Melody Gill, 2023
 
+/*
+ * Collects data from the sensors (temperature, pressure, photo resistor, microhpone)
+ * and saves them in files that are written to the flash chip
+*/
+
 #include "am_mcu_apollo.h"
 #include "am_bsp.h"
 #include "am_util.h"
