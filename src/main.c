@@ -140,7 +140,7 @@ int main(void)
 	FILE * files[4] = {tfile, pfile, lfile, mfile};
 
 	// Add CSV headers
-	char headers[4][40] = {"temperature data celsius,time\r\n", "pressure data pascals,time\r\n", "light data ohms,time\r\n", "microphone data Hz,time\r\n"};
+	char headers[4][40] = {"time,temperature data celsius\r\n", "time,pressure data pascals\r\n", "time,light data ohms\r\n", "time,microphone data Hz\r\n"};
 	add_headers(headers, files, 4);
 
 	// Trigger the ADC to start collecting data

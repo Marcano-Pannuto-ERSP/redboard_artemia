@@ -9,7 +9,7 @@ This repo contains code to test a few components of the whole Artemia system.
 - Temperature/pressure sensor ([datasheet](https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf))
 
 The RTC, flash, and temperature/pressure sensor use SPI to communicate.
-The photoresistor uses the redboard's ADC. The microphone uses PDM.
+The photoresistor uses the redboard's ADC (pin 16). The microphone uses PDM.
 
 For the SPI CS lines:
  *   SPI_CS_0 - pin 11 (Flash)
