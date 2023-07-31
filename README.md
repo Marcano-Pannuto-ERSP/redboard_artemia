@@ -17,6 +17,9 @@ For the SPI CS lines:
  *   SPI_CS_2 - pin 14
  *   SPI_CS_3 - pin 15 (RTC)
 
+For ADC:
+ *   ADC - pin 16
+
  Flash Pins:
 - 1 - CS
 - 2 - SDO
