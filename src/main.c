@@ -110,7 +110,9 @@ void write_csv_line(FILE * fp, uint32_t data) {
 int main(void)
 {
 	// Initialize all the necessary structs
-	adc_init(&adc);
+	uint8_t pins[] = {16};
+	size_t size = 1;
+	adc_init(&adc, pins, size);
 	spi_bus_init(&spi_bus, 0);
 	spi_bus_enable(&spi_bus);
 	spi_bus_init_device(&spi_bus, &flash_spi, SPI_CS_0, 4000000u);
@@ -143,9 +145,6 @@ int main(void)
 	char headers[4][40] = {"time,temperature data celsius\r\n", "time,pressure data pascals\r\n", "time,light data ohms\r\n", "time,microphone data Hz\r\n"};
 	add_headers(headers, files, 4);
 
-	// Trigger the ADC to start collecting data
-	adc_trigger(&adc);
-
 	// print the flash ID to make sure the CS is connected correctly
 	am_util_stdio_printf("flash ID: %02X\r\n", flash_read_id(&flash));
 
@@ -168,12 +167,13 @@ int main(void)
 	write_csv_line(pfile, compensate_press);
 
 	// Read current resistance of the Photo Resistor and write to flash
-	uint32_t data = 0;
+	adc_trigger(&adc);
+	uint32_t data[1] = {0};
 	uint32_t resistance;
-	if (adc_get_sample(&adc, &data))
+	if (adc_get_sample(&adc, data, pins, size))
 	{
 		const double reference = 1.5;
-		double voltage = data * reference / ((1 << 14) - 1);
+		double voltage = data[0] * reference / ((1 << 14) - 1);
 		am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data);
 		resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
 		am_util_stdio_printf("resistance = <%d>\r\n", resistance);
