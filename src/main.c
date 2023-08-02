@@ -170,14 +170,12 @@ int main(void)
 	adc_trigger(&adc);
 	uint32_t data[1] = {0};
 	uint32_t resistance;
-	if (adc_get_sample(&adc, data, pins, size))
-	{
-		const double reference = 1.5;
-		double voltage = data[0] * reference / ((1 << 14) - 1);
-		am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data[0]);
-		resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
-		am_util_stdio_printf("resistance = <%d>\r\n", resistance);
-	}
+	while(!(adc_get_sample(&adc, data, pins, size)));
+	const double reference = 1.5;
+	double voltage = data[0] * reference / ((1 << 14) - 1);
+	am_util_stdio_printf("voltage = <%.3f> (0x%04X)\r\n", voltage, data[0]);
+	resistance = (uint32_t)((10000 * voltage)/(3.3 - voltage));
+	am_util_stdio_printf("resistance = <%d>\r\n", resistance);
 	write_csv_line(lfile, resistance);
 
     // Turn on the PDM and start the first DMA transaction.
