@@ -115,7 +115,7 @@ int main(void)
 	adc_init(&adc, pins, size);
 	spi_bus_init(&spi_bus, 0);
 	spi_bus_enable(&spi_bus);
-	spi_bus_init_device(&spi_bus, &flash_spi, SPI_CS_0, 4000000u);
+	spi_bus_init_device(&spi_bus, &flash_spi, SPI_CS_2, 4000000u);
 	spi_bus_init_device(&spi_bus, &bmp280_spi, SPI_CS_1, 4000000u);
 	spi_bus_init_device(&spi_bus, &rtc_spi, SPI_CS_3, 2000000u);
 	am1815_init(&rtc, &rtc_spi);

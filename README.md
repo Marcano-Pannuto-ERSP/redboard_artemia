@@ -12,13 +12,15 @@ The RTC, flash, and temperature/pressure sensor use SPI to communicate.
 The photoresistor uses the redboard's ADC (pin 16). The microphone uses PDM.
 
 For the SPI CS lines:
- *   SPI_CS_0 - pin 11 (Flash)
+ *   SPI_CS_0 - pin 11
  *   SPI_CS_1 - pin 17 (Temp/pressure sensor)
- *   SPI_CS_2 - pin 14
+ *   SPI_CS_2 - pin 14 (Flash)
  *   SPI_CS_3 - pin 15 (RTC)
 
 For ADC:
- *   ADC - pin 16
+ *   Pin 16
+ *   Pin 29
+ *   Pin 11
 
  Flash Pins:
 - 1 - CS
