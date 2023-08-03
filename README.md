@@ -11,16 +11,16 @@ This repo contains code to test a few components of the whole Artemia system.
 The RTC, flash, and temperature/pressure sensor use SPI to communicate.
 The photoresistor uses the redboard's ADC (pin 16). The microphone uses PDM.
 
+For ADC:
+ *   Pin 16
+ *   Pin 29
+ *   Pin 11
+
 For the SPI CS lines:
  *   SPI_CS_0 - pin 11
  *   SPI_CS_1 - pin 17 (Temp/pressure sensor)
  *   SPI_CS_2 - pin 14 (Flash)
  *   SPI_CS_3 - pin 15 (RTC)
-
-For ADC:
- *   Pin 16
- *   Pin 29
- *   Pin 11
 
  Flash Pins:
 - 1 - CS
@@ -31,6 +31,17 @@ For ADC:
 - 6 - SCK
 - 7 - 
 - 8 - VCC
+
+BMP280 Pins:
+- SCL = SCK
+- SDA = SDI
+- CSB = CS
+- SDD = SDO
+
+Photoresistor Pins:
+- Left - ADC
+- Middle - VCC
+- Right - GND
 
 ## Dependencies
  - https://github.com/gemarcano/AmbiqSuiteSDK
