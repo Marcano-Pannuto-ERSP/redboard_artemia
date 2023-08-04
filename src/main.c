@@ -145,13 +145,13 @@ int main(void)
 	char headers[4][40] = {"time,temperature data celsius\r\n", "time,pressure data pascals\r\n", "time,light data ohms\r\n", "time,microphone data Hz\r\n"};
 	add_headers(headers, files, 4);
 
-	// print the flash ID to make sure the CS is connected correctly
+	// print the flash ID to make sure the CS is connected correctly (should be 1520C2)
 	am_util_stdio_printf("flash ID: %02X\r\n", flash_read_id(&flash));
 
-	// print the RTC ID to make sure the CS is connected correctly
+	// print the RTC ID to make sure the CS is connected correctly (should be 18)
 	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(&rtc, 0x28));
 
-	// Print BMP280 ID
+	// Print BMP280 ID (should be 58)
     am_util_stdio_printf("BMP280 ID: %02X\r\n", bmp280_read_id(&temp));
 
 	// Read current temperature from BMP280 sensor and write to flash
