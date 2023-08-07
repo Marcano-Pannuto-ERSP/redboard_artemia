@@ -26,6 +26,13 @@ SECTIONS
     KEEP(*(.init_array*))
     __init_array_end = .;
 
+    __fini_array_start = .;
+    KEEP(*(.fini_array*))
+    __fini_array_end = .;
+
+    KEEP(*(.init))
+    KEEP(*(.fini))
+
     /* .rodata */
     . = ALIGN(4);
     *(.rodata)
