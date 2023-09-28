@@ -28,6 +28,7 @@
 #include <pdm.h>
 #include <syscalls.h>
 #include <asimple_littlefs.h>
+#include <power_control.h>
 
 #include <fft.h>
 #include <kiss_fftr.h>
@@ -44,6 +45,7 @@ struct flash flash;
 struct pdm pdm;
 struct asimple_littlefs fs;
 struct fft fft;
+struct power_control power_control;
 
 __attribute__((constructor))
 static void redboard_init(void)
@@ -59,6 +61,8 @@ static void redboard_init(void)
 	uart_init(&uart, UART_INST0);
 	syscalls_uart_init(&uart);
 
+	power_control_init(&power_control, 42, 43);
+
 	// After init is done, enable interrupts
 	am_hal_interrupt_master_enable();
 }
@@ -67,6 +71,7 @@ __attribute__((destructor))
 static void redboard_shutdown(void)
 {
 	// Any destructors/code that should run when main returns should go here
+	power_control_shutdown(&power_control);
 }
 
 // Add headers to the file if there isn't one already
@@ -128,7 +133,7 @@ int main(void)
     asimple_littlefs_init(&fs, &flash);
     int err = asimple_littlefs_mount(&fs);
     if (err < 0)
-    {   
+    {
         asimple_littlefs_format(&fs);
         asimple_littlefs_mount(&fs);
     }
@@ -207,6 +212,8 @@ int main(void)
     }
 	// Save frequency with highest amplitude to flash
 	write_csv_line(mfile, max);
+
+	write_csv_line(stdout, 0);
 
 	// Close files
 	fclose(tfile);
